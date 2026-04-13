@@ -10,7 +10,7 @@ class PokerAgent(Agent):
         self._actuators = {}
         self.isSmallBlind = False
         self.isLargeBlind = False
-        self.
+        self.chips = 0 # placeholder para un valor mas adelante
 
 
 class Turn(SimulatedSensor):
@@ -22,14 +22,29 @@ class CurrentBet(SimulatedSensor):
     def sense(self):
         response = self._env.get_property(property_name="maxBet")
         return response["maxBet"]
-# un sensor de pozo
+
+class PotSensor(SimulatedSensor):
+    def sense(self):
+        response = self._env.get_property(property_name="pot")
+        return response["pot"]
 
 class Check(SimulatedActuator):
     def act(self, bet: CurrentBet):
-        request_info = {"maxBet":betValue}
-        if request_info["maxBet"] >= bet :
-                self._env.take_action(self._agent.id,"check")
-# deberia saber su cantidad de fichas, pero el entorno tambien
+        request_info = "maxBet"
+        if request_info["maxBet"] == bet :
+            self._env.take_action(self._agent.id,"check")
+        elif request_info["maxBet"] > bet:
+            self._env.take_action(self._agent.id,"check-allin")
+
 class Raise(SimulatedActuator):
+    def act(self, bet: CurrentBet):
+        request_info = {"playerPot": playerChips ,"maxBet": currentMax}
+        if request_info["maxBet"]<= bet and bet <= request_info["playerPot"]:
+                self._env.take_action(self._agent.id,"raise")
 
 class Fold(SimulatedActuator):
+    def act(self, bet: CurrentBet):
+        if bet == 0 :
+                self._env.take_action(self._agent.id,"fold")
+
+# deberia saber su cantidad de fichas, pero el entorno tambien
