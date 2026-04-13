@@ -43,8 +43,7 @@ class Raise(SimulatedActuator):
                 self._env.take_action(self._agent.id,"raise")
 
 class Fold(SimulatedActuator):
-    def act(self, bet: CurrentBet):
-        if bet == 0 :
-                self._env.take_action(self._agent.id,"fold")
+    def act(self):
+        self._env.take_action(self._agent.id,"fold")
 
 # deberia saber su cantidad de fichas, pero el entorno tambien
