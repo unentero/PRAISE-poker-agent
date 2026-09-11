@@ -8,9 +8,7 @@ class PokerAgent(Agent):
         self._cards=[]
         self._sensors = {}
         self._actuators = {}
-        self.isSmallBlind = False
-        self.isLargeBlind = False
-        self.chips = 0 # placeholder para un valor mas adelante
+        self.playerChips = 0 # placeholder para un valor mas adelante
 
 
 class Turn(SimulatedSensor):
@@ -27,6 +25,21 @@ class PotSensor(SimulatedSensor):
     def sense(self):
         response = self._env.get_property(property_name="pot")
         return response["pot"]
+
+class TableCards(SimulatedSensor):
+    def sense(self):
+        response = self._env.get_property(self._agent.id, property_name="table cards")
+        return response["table cards"]
+
+class HandCards(SimulatedSensor):
+    def sense(self):
+        response = self._env.get_property(property_name="hand cards")
+        return response["hand cards"]
+
+class Chips(SimulatedSensor):
+    def sense(self):
+        response = self._env.get_property(property_name="chips")
+        return response["chips"]
 
 class Check(SimulatedActuator):
     def act(self, bet: CurrentBet):
