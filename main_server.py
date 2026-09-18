@@ -20,8 +20,8 @@ class VacuumWorldPyroAdapter:
         if self._vacuumenv is None:
             raise RuntimeError("Environment not built yet")
 
-        buffer = StateBuffer(agent_id, self._vacuumenv)
-        buffer_adapter = StateBufferPyroAdapter(buffer)
+        buffer = StateBuffer(agent_id)
+        self._vacuumenv.add_statebuffer(agent_id, buffer)
 
         uri = self._daemon.register(buffer_adapter)
         name = f"statebuffer.agent_{agent_id}"

@@ -16,12 +16,11 @@ class SimulatedEnvironment(metaclass=ABCMeta):
             self._agents.remove(agent_id)
 
     def add_statebuffer(self, agent_id: int, statebuffer) -> None:
-        self._agents.append(agent_id)
-        self._statebuffers.append({"agent_id": agent_id, "statebuffer": statebuffer})
+        if agent_id in self._agents:
+            self._statebuffers.append({"agent_id": agent_id, "statebuffer": statebuffer})
 
     def remove_statebuffer(self, agent_id: int, statebuffer) -> None:
         if agent_id in self._agents:
-            self._agents.remove(agent_id)
             self._statebuffers.remove(statebuffer)
 
     @abstractmethod

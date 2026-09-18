@@ -8,13 +8,13 @@ class Card():
         self.palo = None
 
     def __repr__(self):
-        return f"{self.valor} de {self.palo}"
+        return f"|{self.valor}{self.palo}|"
 
 
 class Deck():
     def __init__(self):
-        self._valores = ['As', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jota', 'Reina', 'Rey']
-        self._palos = ['Corazon', 'Pica', 'Trebol', 'Espada']
+        self._valores = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+        self._palos = ['♥︎', '♠', '♣', '♦']
         self.deck = self._armarMazo(self._valores, self._palos)
 
     def _armarMazo(self, valores, palos):  # genera un mazo desde 0
@@ -32,7 +32,7 @@ class EvaluadorPoker():
     # valor numérico de cada carta para poder compararlas y armar escaleras
     VALORES_ORDEN = {
         '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
-        '9': 9, '10': 10, 'Jota': 11, 'Reina': 12, 'Rey': 13, 'As': 14
+        '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
     }
 
     NOMBRES_RANKING = {
@@ -139,9 +139,9 @@ class EvaluadorPoker():
     @classmethod
     def determinar_ganador(cls, cartasJugadores):
         
-        #cartasJugadores: dict {nombre_jugador: lista_de_cartas}
+        #cartasJugadores: dict {id_jugador: lista_de_cartas}
         #Cada lista de cartas debe incluir las cartas propias + comunitarias.
-        #Retorna: (nombre_ganador, resultado_evaluado)
+        #Retorna: (id_ganador, resultado_evaluado)
         #Si hay empate exacto, retorna el primero encontrado con ese resultado
         #y se puede detectar el empate comparando resultados manualmente.
         
@@ -150,4 +150,4 @@ class EvaluadorPoker():
             for jugador, cartas in cartasJugadores.items()
         }
         ganador = max(resultados, key=lambda j: resultados[j])
-        return ganador, resultados[ganador], resultados
+        return ganador, resultados[ganador]

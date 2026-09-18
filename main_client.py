@@ -34,7 +34,7 @@ agent = VacuumAgent(vacuumenv)
 statebuffer_name = vacuumenv.create_statebuffer(agent.id)
 statebuffer = Pyro4.Proxy(f"PYRONAME:{statebuffer_name}")
 
-renderer = ConsoleRenderer()
+renderer = PyGameRenderer()
 renderer.observe(statebuffer)
 print(agent.id)
 

@@ -23,9 +23,8 @@ class IStateBuffer(ABC):
         pass
 
 class StateBuffer(IStateBuffer):
-    def __init__(self, agent_id: int, env: SimulatedEnvironment):
+    def __init__(self, agent_id: int):
         super(StateBuffer, self).__init__()
-        env.add_statebuffer(agent_id, self)
 
     def update(self, state):
         self.state = state
