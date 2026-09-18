@@ -24,11 +24,10 @@ def render_thread(renderer):
 if __name__ == '__main__':
     env = PokerTable()
     agent1 = PokerAgent(env)
-    agent2 = PokerAgent(env)
-    env.prepare_stage_0(1000)  #test
-
+    #agent2 = PokerAgent(env)
     #agent3 = PokerAgent(env)
     #agent4 = PokerAgent(env)
+    #env.prepare_stage_0(1000)  #test
     renderer = ConsoleRenderer()
     statebuffer = StateBuffer(agent1.id)
     
@@ -38,7 +37,7 @@ if __name__ == '__main__':
     print(agent1.id)
 
     thread_agent1 = threading.Thread(target=agent_thread, args=(agent1,))
-    thread_agent2 = threading.Thread(target=agent_thread, args=(agent2,))
+    #thread_agent2 = threading.Thread(target=agent_thread, args=(agent2,))
     #thread_agent3 = threading.Thread(target=agent_thread, args=(agent3,))
     #thread_agent4 = threading.Thread(target=agent_thread, args=(agent4,))
 
@@ -46,12 +45,12 @@ if __name__ == '__main__':
 
     thread_renderer.start()
     thread_agent1.start()
-    thread_agent2.start()
+    #thread_agent2.start()
     #thread_agent3.start()
     #thread_agent4.start()
 
     thread_agent1.join()
-    thread_agent2.join()
+    #thread_agent2.join()
     #thread_agent3.join()
     #thread_agent4.join()
     thread_renderer.join()

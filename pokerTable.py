@@ -61,10 +61,10 @@ class PokerTable(SimulatedEnvironment):
             self.currentTurn = 0
 
     def next_stage(self):
-            if self.currentStage < 3:
+            if self.currentStage < 4:
                 self.currentStage += 1
-            else:
-                self.currentStage = 0
+            #else:
+            #    self.currentStage = 0
     
     def repartir(self):
         for agent_id in self._agents:
@@ -122,12 +122,14 @@ class PokerTable(SimulatedEnvironment):
         for agent in self._agents:
             self.playerBets[agent] = 0
 
-    def has_called(self):
-        all_called = True
-        for agent in self._agents:
-            if not(agent in self.foldedPlayers) and not(self.playerBets[agent] == self.maxBet):
-                all_called = False
-        return all_called
+    def has_called(self) -> bool:
+        active_players = [agent for agent in self._agents if agent  not in self.foldedPlayers]
+        if len(active_players) <= 1:
+            return True
+        for agent_id in active_players:
+            if self.playerBets.get(agent_id, 0) < self.maxBet:
+                return False
+        return True
     
     def add_cards_to_table(self,amount):
         for i in range(amount):
@@ -235,30 +237,33 @@ class PokerTable(SimulatedEnvironment):
         if agent_id in self._agents and self.is_turn(agent_id):
             action_methods = {
                 "fold": (self.fold,[]),
-                "raise": (self.raise_bet,["ammount"]),
+                "raise": (self.raise_bet,["amount"]),
                 "check": (self.check_bet,[])
             }
             action_method, expected_params = action_methods.get(action_name, (None, None))
             if action_method:
                 args = [agent_id] + [params.get(param) for param in expected_params]
                 action_method(*args)
-                # logica de has_called
+                
+                # Lógica de avance de stages (usar llamadas reales a los métodos)
                 if self.has_called():
                     if self.currentStage == 0:
-                        self.prepare_stage_0(1000) #repartir y agregar fichas iniciales
+                        self.prepare_stage_0(1000)
                     elif self.all_players_have_cards():
-                        self.prepare_stage_1 #seleccionar ciegas, primera ronda de apuestas
-                    elif not(self.all_folded) and not(self.pot == 0):
-                        self.prepare_stage_2 #flop, 3 cartas en la mesa
-                    elif not(self.all_folded) and len(self.cardsOnTable) == 3:
-                        self.prepare_stage_3 #turn, una carta mas en la mesa (total 4)
-                    elif not(self.all_folded) and len(self.cardsOnTable) == 4:
-                        self.prepare_stage_4 #river, una carta mas en la mesa (total 5)
-                    elif not(self.all_folded) and len(self.cardsOnTable) == 5:
-                        self.prepare_stage_5
-                    elif (self.all_folded):
-                        winnerID = agent_id not in self.foldedPlayers
-                        self.gameWinner = self.agentsAlias[winnerID]
+                        self.prepare_stage_1()
+                    elif not self.all_folded() and not (self.pot == 0):
+                        self.prepare_stage_2()
+                    elif not self.all_folded() and len(self.cardsOnTable) == 3:
+                        self.prepare_stage_3()
+                    elif not self.all_folded() and len(self.cardsOnTable) == 4:
+                        self.prepare_stage_4()
+                    elif not self.all_folded() and len(self.cardsOnTable) == 5:
+                        self.prepare_stage_5()
+                    elif self.all_folded():
+                        winnerID = next((a for a in self._agents if a not in self.foldedPlayers), None)
+                        if winnerID is not None:
+                            self.gameWinner = self.agentsAlias[winnerID]
+                            self.add_chips(winnerID, self.pot)
                 self._update_statebuffers(agent_id)
             else:
                 print(f"Invalid action: {action_name}")
