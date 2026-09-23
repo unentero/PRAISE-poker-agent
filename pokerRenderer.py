@@ -30,6 +30,8 @@ class ConsoleRenderer(IRenderer):
             print('Hand: ' + show_hand_cards(state["player cards"])) #cartas mano
             print('Table: ' + show_table_cards(state["table cards"])) #cartas mesa
             print('Stage: ' + str(state["stage"])) #round
+            #print('Chips: ') + str(state["chips"])
+            #print('Max Bet: ') + str(state["maxBet"])
             print('Pot: ' + str(state["pot"])) #pot
             if not(state["winner"] == ""):
                 print('Winner: ' + state["winner"]) #ganador

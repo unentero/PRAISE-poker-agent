@@ -5,42 +5,43 @@ from environments import SimulatedEnvironment
 import random
 
 class PokerTable(SimulatedEnvironment):
-    def __init__(self):
+    def __init__(self,size,base_chips):
         super().__init__()
-        self._agents = [] #Lista de jugadores
-        self.agentsAlias = {}
-        self.currentStage = 0  # 0 = Repartir, 1 = PreFlop, 2 = Flop, 3 = Turn, 4 = River, 5 = Showdown
-        self._statebuffers = [] #No se que hace esto pero lo dejo porlasdudas
+        # basic items
+        self._agents = [] 
+        self._statebuffers = [] 
         self.mazo = Deck().deck
-        random.shuffle(self.mazo) #Este es el mazo pero lo mezcla previamente
-        self.smallBlind = 5
-        self.bigBlind = 2*self.smallBlind
-        self.maxBet = self.bigBlind
-        self.smallBlindId = 0
-        self.bigBlindId = 0
-        self.pot = 0
+        random.shuffle(self.mazo) 
+        # player info
+        self.agentsAlias = {}
         self.playerOrder = {}
         self.foldedPlayers = []
-        self.currentTurn = 0
         self.playerCards = {}
         self.playerChips = {}
         self.playerBets = {}
-        self.cardsOnTable = []
-        self.tableSize = 4
         self.gameWinner = ""
+        # table parameters
+        self.smallBlind = 5
+        self.bigBlind = 2*self.smallBlind
+        self.maxBet = 0
+        self.smallBlindId = 0
+        self.bigBlindId = 0
+        self.currentTurn = 0
+        self.currentStage = -1  
+        self.pot = 0
+        self.cardsOnTable = []
+        self.tableSize = size
+        self.baseChips = base_chips
         
     def add(self, agent_id: int) -> None:
-        playersAmmount = 0
-        numberPlayer = 0 
-        if not(agent_id in self._agents) and playersAmmount <= self.tableSize:   
+        if not(agent_id in self._agents) and len(self._agents) < self.tableSize:   
             self._agents.append(agent_id)
-            self.playerOrder[agent_id] = numberPlayer
-            self.agentsAlias[agent_id] = "Player " + str(numberPlayer)
+            self.playerOrder[agent_id] = len(self._agents)-1
+            self.agentsAlias[agent_id] = "Player " + str(len(self._agents))
             self.playerCards[agent_id] = []
             self.playerChips[agent_id] = 0
             self.playerBets[agent_id] = 0
-            numberPlayer += 1
-            playersAmmount += 1     
+            self.add_chips(agent_id, self.baseChips) 
 
     def remove(self, agent_id: int) -> None:
         if agent_id in self._agents:
@@ -48,23 +49,36 @@ class PokerTable(SimulatedEnvironment):
 
     def add_statebuffer(self, agent_id: int, statebuffer: IStateBuffer) -> None:
         super(PokerTable, self).add_statebuffer(agent_id, statebuffer)
-        statebuffer.update({"name": self.agentsAlias[agent_id], "stage": self.currentStage,"player cards": self.playerCards[agent_id],
-                         "table cards": self.cardsOnTable, "pot" : self.pot, "winner":self.gameWinner})
+        statebuffer.update(
+            {"name": self.agentsAlias[agent_id], 
+            "stage": self.currentStage,
+            "player cards": self.playerCards[agent_id],
+            "table cards": self.cardsOnTable,
+            "chips": self.playerChips[agent_id],
+            "maxBet": self.maxBet,  
+            "pot" : self.pot, 
+            "winner":self.gameWinner
+            })
 
     def remove_statebuffer(self, agent_id: int,statebuffer: IStateBuffer) -> None:
         super(PokerTable, self).remove_statebuffer(agent_id, statebuffer)
 
     def next_turn(self):
-        if self.currentTurn < 3:
+        if self.currentTurn < len(self._agents)-1:
             self.currentTurn += 1
         else:
             self.currentTurn = 0
 
-    def next_stage(self):
-            if self.currentStage < 4:
-                self.currentStage += 1
-            #else:
-            #    self.currentStage = 0
+    def has_called(self):
+        active_players = [agent for agent in self._agents if agent  not in self.foldedPlayers]
+        if len(active_players) <= 1:
+            all_called = True
+        all_called = True
+        for agent_id in active_players:
+            if self.playerBets.get(agent_id, 0) < self.maxBet:
+                all_called = False
+                break
+        return all_called
     
     def repartir(self):
         for agent_id in self._agents:
@@ -76,6 +90,8 @@ class PokerTable(SimulatedEnvironment):
             self.bigBlindId = self._agents[1]
             self.deduct_chips(self.smallBlindId,self.smallBlind)
             self.deduct_chips(self.bigBlindId,self.bigBlind)
+            self.playerBets[self.smallBlindId] += self.smallBlind
+            self.playerBets[self.bigBlindId] += self.bigBlind
 
     def add_chips(self,agent_id,amount):
         self.playerChips[agent_id] += amount
@@ -93,17 +109,13 @@ class PokerTable(SimulatedEnvironment):
         if agent_id in self._agents and not(agent_id in self.foldedPlayers):
             return self.currentTurn == self.playerOrder[agent_id]
 
-    def check_bet(self,agent_id):
+    def check_bet(self, agent_id):
         if agent_id in self._agents:
-            if self.maxBet >= self.playerChips[agent_id]:
-                allin_bet = self.playerChips[agent_id]
-                self.deduct_chips(agent_id,allin_bet)
-                self.playerBets[agent_id] = allin_bet
-                self.next_turn()
-            else:
-                self.deduct_chips(agent_id,self.maxBet)
-                self.playerBets[agent_id] = self.maxBet
-                self.next_turn()
+            amount_to_call = self.maxBet - self.playerBets.get(agent_id, 0)
+            if amount_to_call > 0:
+                self.deduct_chips(agent_id, amount_to_call)
+                self.playerBets[agent_id] += amount_to_call
+            self.next_turn()
         
     def raise_bet(self,agent_id,amount):
         if agent_id in self._agents:            
@@ -119,17 +131,9 @@ class PokerTable(SimulatedEnvironment):
             self.foldedPlayers.append(agent_id)
 
     def clean_bets(self):
+        self.maxBet = 0
         for agent in self._agents:
             self.playerBets[agent] = 0
-
-    def has_called(self) -> bool:
-        active_players = [agent for agent in self._agents if agent  not in self.foldedPlayers]
-        if len(active_players) <= 1:
-            return True
-        for agent_id in active_players:
-            if self.playerBets.get(agent_id, 0) < self.maxBet:
-                return False
-        return True
     
     def add_cards_to_table(self,amount):
         for i in range(amount):
@@ -138,11 +142,10 @@ class PokerTable(SimulatedEnvironment):
 
     def get_winner(self):
         all_cards = {}
-        cards_table = []
-        for n in range(0,4):
-            cards_table.append(self.cardsOnTable[n])
+        cards_table = self.cardsOnTable[:5]
         for agent_id in self._agents:
-            all_cards[agent_id] = self.playerCards[agent_id] + cards_table
+            all_cards[agent_id] = self.playerCards.get(agent_id,[]) + cards_table
+        
         winnerID , resultado = EvaluadorPoker.determinar_ganador(all_cards)
         self.gameWinner = self.agentsAlias[winnerID]
         self.add_chips(winnerID,self.pot)
@@ -154,38 +157,45 @@ class PokerTable(SimulatedEnvironment):
                 return False
         return True
 
-    def prepare_stage_0(self,base_chips): # Reparte las cartas a cada jugador
-        self.repartir()
-        for agent_id in self._agents:
-            self.add_chips(agent_id, base_chips)
-        self.next_stage()
+    def mesa_llena(self):
+        return self.tableSize == len(self._agents) 
     
-    def prepare_stage_1(self): # Primera ronda de apuestas (PreFlop)
+    def prepare_stage_0(self): # Reparte cartas e inicializa fichas
+        self.currentStage = 0
+        self.maxBet = 0
+        self.clean_bets()
+        self.repartir()
+        self.select_blinds()
+            
+    def prepare_stage_1(self): # PreFlop
+        self.currentStage = 1
         self.clean_bets()
         self.currentTurn = 0
-        self.select_blinds()
+        self.maxBet = self.bigBlind
+        
 
-
-    def prepare_stage_2(self): # Segunda ronda de apuestas (Flop)
+    def prepare_stage_2(self): # Flop
+        self.currentStage = 2
+        self.currentTurn = 0
         self.clean_bets()
-        self.select_blinds()
         self.add_cards_to_table(3)
 
-
-    def prepare_stage_3(self): # Tercera ronda de apuestas (Turn)
+    def prepare_stage_3(self): # Turn
+        self.currentStage = 3
+        self.currentTurn = 0
         self.clean_bets()
-        self.select_blinds()
         self.add_cards_to_table(1)
 
-
-    def prepare_stage_4(self): # Cuarta ronda de apuestas (River)
+    def prepare_stage_4(self): # River
+        self.currentStage = 4
+        self.currentTurn = 0
         self.clean_bets()
-        self.select_blinds()
         self.add_cards_to_table(1)
 
-    def prepare_stage_5(self):  # Showdown
+    def prepare_stage_5(self): # Showdown
+        self.currentStage = 5
         self.get_winner()
-
+    
     def all_folded(self):
         return (len(self.foldedPlayers) == self.tableSize -1)
 
@@ -244,27 +254,27 @@ class PokerTable(SimulatedEnvironment):
             if action_method:
                 args = [agent_id] + [params.get(param) for param in expected_params]
                 action_method(*args)
-                
-                # Lógica de avance de stages (usar llamadas reales a los métodos)
-                if self.has_called():
-                    if self.currentStage == 0:
-                        self.prepare_stage_0(1000)
-                    elif self.all_players_have_cards():
-                        self.prepare_stage_1()
-                    elif not self.all_folded() and not (self.pot == 0):
-                        self.prepare_stage_2()
-                    elif not self.all_folded() and len(self.cardsOnTable) == 3:
-                        self.prepare_stage_3()
-                    elif not self.all_folded() and len(self.cardsOnTable) == 4:
-                        self.prepare_stage_4()
-                    elif not self.all_folded() and len(self.cardsOnTable) == 5:
-                        self.prepare_stage_5()
-                    elif self.all_folded():
-                        winnerID = next((a for a in self._agents if a not in self.foldedPlayers), None)
-                        if winnerID is not None:
-                            self.gameWinner = self.agentsAlias[winnerID]
-                            self.add_chips(winnerID, self.pot)
-                self._update_statebuffers(agent_id)
+                if self.mesa_llena() and self.currentStage == -1:
+                    self.prepare_stage_0()
+                elif self.currentStage == 0:
+                    self.prepare_stage_1()
+                #logica has_called
+                if self.all_players_have_cards:
+                    if self.has_called():
+                        if self.all_folded():
+                            winnerID = next((a for a in self._agents if a not in self.foldedPlayers), None)
+                            if winnerID is not None:
+                                self.gameWinner = self.agentsAlias[winnerID]
+                                self.add_chips(winnerID, self.pot)   
+                        elif self.currentStage == 1:
+                            self.prepare_stage_2()
+                        elif len(self.cardsOnTable)==3 and self.currentStage == 2:
+                            self.prepare_stage_3()
+                        elif len(self.cardsOnTable)==4 and self.currentStage == 3:
+                            self.prepare_stage_4()
+                        elif len(self.cardsOnTable)==5 and self.currentStage == 4:
+                            self.prepare_stage_5()
+                self._update_statebuffers()
             else:
                 print(f"Invalid action: {action_name}")
     def _get_state_for_agent(self, agent_id: int) -> dict:
@@ -279,7 +289,8 @@ class PokerTable(SimulatedEnvironment):
             "chips": self.playerChips.get(agent_id, 0),
         }
 
-    def _update_statebuffers(self, agent_id: int) -> None:
-        relevant_statebuffers = [entry["statebuffer"] for entry in self._statebuffers if entry["agent_id"] == agent_id]
-        for statebuffer in relevant_statebuffers:
-            statebuffer.update(self._get_state_for_agent(agent_id))
+    def _update_statebuffers(self) -> None:
+        for entry in self._statebuffers:
+            a_id = entry["agent_id"]
+            sb = entry["statebuffer"]
+            sb.update(self._get_state_for_agent(a_id))
